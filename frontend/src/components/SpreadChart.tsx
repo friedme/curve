@@ -50,10 +50,10 @@ export default function SpreadChart({ spread, unit }: Props) {
               fontSize: "13px",
             }}
             labelStyle={{ color: "#94a3b8" }}
-            formatter={(value: number) => [
-              `${value >= 0 ? "+" : ""}${value.toFixed(2)}`,
-              "Spread",
-            ]}
+            formatter={(value: unknown) => {
+              const v = Number(value);
+              return [`${v >= 0 ? "+" : ""}${v.toFixed(2)}`, "Spread"];
+            }}
           />
           <Bar dataKey="diff" radius={[3, 3, 0, 0]}>
             {spread.map((entry, index) => (

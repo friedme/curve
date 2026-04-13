@@ -127,12 +127,12 @@ export default function SpotPrices({ prices }: Props) {
                     fontSize: "13px",
                   }}
                   labelStyle={{ color: "#94a3b8" }}
-                  formatter={(value: number) => [
-                    formatPrice(value, history.unit),
+                  formatter={(value: unknown) => [
+                    formatPrice(Number(value), history.unit),
                     history.display_name,
                   ]}
-                  labelFormatter={(d: string) =>
-                    new Date(d).toLocaleDateString("en-US", {
+                  labelFormatter={(d: unknown) =>
+                    new Date(String(d)).toLocaleDateString("en-US", {
                       month: "long",
                       day: "numeric",
                       year: "numeric",

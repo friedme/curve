@@ -149,12 +149,12 @@ export function CurveEvolutionChart({ data }: EvolutionProps) {
               fontSize: "13px",
             }}
             labelStyle={{ color: "#94a3b8" }}
-            formatter={(value: number, name: string) => [
-              value.toFixed(2),
-              name,
+            formatter={(value: unknown, name: unknown) => [
+              Number(value).toFixed(2),
+              String(name),
             ]}
           />
-          {visibleCurves.map((curve, i) => {
+          {visibleCurves.map((curve) => {
             const colorIdx = data.curves.indexOf(curve);
             return (
               <Line
@@ -226,10 +226,10 @@ export function SpreadTimeSeriesChart({ data }: SpreadProps) {
               fontSize: "13px",
             }}
             labelStyle={{ color: "#94a3b8" }}
-            formatter={(value: number, name: string) => [
-              `${value >= 0 ? "+" : ""}${value.toFixed(2)}`,
-              name,
-            ]}
+            formatter={(value: unknown, name: unknown) => {
+              const v = Number(value);
+              return [`${v >= 0 ? "+" : ""}${v.toFixed(2)}`, String(name)];
+            }}
           />
           <Legend wrapperStyle={{ fontSize: "12px", color: "#94a3b8" }} />
           {hasM6 && (
