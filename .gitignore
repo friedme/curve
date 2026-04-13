@@ -10,7 +10,6 @@ node_modules/
 dist/
 
 # Data (snapshots are personal accumulating data)
-data/snapshots/
 
 # IDE
 .vscode/
