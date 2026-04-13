@@ -1,0 +1,22 @@
+services:
+  web:
+    build: .
+    ports:
+      - "8001:8001"
+    volumes:
+      - curve-data:/app/data/snapshots
+    restart: unless-stopped
+
+  snapshot:
+    build: .
+    command: python snapshot.py
+    volumes:
+      - curve-data:/app/data/snapshots
+    # Run daily — use cron on the host or a scheduler container.
+    # Simplest: add this to Pi's crontab:
+    #   0 22 * * * docker compose -f /home/pi/curve/docker-compose.yml run --rm snapshot
+    profiles:
+      - tools
+
+volumes:
+  curve-data:

@@ -4,8 +4,8 @@ import CommoditySelector from "./components/CommoditySelector";
 import CurveMetrics from "./components/CurveMetrics";
 import DataQualityBanner from "./components/DataQualityBanner";
 import SpotPrices from "./components/SpotPrices";
-import { CurveEvolutionChart, SpreadTimeSeriesChart } from "./components/TermStructure";
-import { useCurrentCurve, useCurveEvolution, useSpreadHistory, useSpotPrices } from "./hooks/useCurveData";
+import { CurveEvolutionChart } from "./components/TermStructure";
+import { useCurrentCurve, useCurveEvolution, useSpotPrices } from "./hooks/useCurveData";
 
 const queryClient = new QueryClient();
 
@@ -16,7 +16,6 @@ function Dashboard() {
     useCurrentCurve(selectedCommodity);
   const { data: spotPrices } = useSpotPrices();
   const { data: evolution } = useCurveEvolution(selectedCommodity);
-  const { data: spreadHistory } = useSpreadHistory(selectedCommodity);
 
   return (
     <div className="min-h-screen bg-[#0a0e17]">
@@ -71,10 +70,6 @@ function Dashboard() {
                 </div>
               </div>
             )}
-            {spreadHistory && spreadHistory.points.length > 0 && (
-              <SpreadTimeSeriesChart data={spreadHistory} />
-            )}
-
             {spotPrices && <SpotPrices prices={spotPrices} />}
           </div>
         )}

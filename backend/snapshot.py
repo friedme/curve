@@ -24,6 +24,7 @@ Usage:
 
 import argparse
 import csv
+import os
 import sys
 from datetime import date
 from pathlib import Path
@@ -34,7 +35,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from app.config import COMMODITIES, DataQuality
 from app.services.barchart import fetch_futures_chain
 
-DEFAULT_DIR = Path(__file__).parent.parent / "data" / "snapshots"
+DEFAULT_DIR = Path(os.environ.get("CURVE_DATA_DIR", Path(__file__).parent.parent / "data" / "snapshots"))
 
 CSV_COLUMNS = ["snapshot_date", "symbol", "contract_date", "label", "tenor", "price"]
 

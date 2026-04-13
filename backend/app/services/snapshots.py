@@ -8,10 +8,11 @@ and returns it in the same format as the live Barchart data.
 """
 
 import csv
+import os
 from datetime import date
 from pathlib import Path
 
-SNAPSHOT_DIR = Path(__file__).parent.parent.parent.parent / "data" / "snapshots"
+SNAPSHOT_DIR = Path(os.environ.get("CURVE_DATA_DIR", Path(__file__).parent.parent.parent.parent / "data" / "snapshots"))
 
 
 def get_available_dates(slug: str) -> list[date]:

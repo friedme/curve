@@ -61,6 +61,9 @@ async def compare_curves(
     current = await build_forward_curve(commodity_slug)
     historical = await build_forward_curve(commodity_slug, historical_date=historical_date)
 
+    if not historical["points"]:
+        raise HTTPException(404, f"No snapshot data available near {historical_date}")
+
     # Compute spread by matching on TENOR (months forward), not label.
     # This compares "1-month forward then" vs "1-month forward now".
     hist_by_tenor = {p["tenor"]: p for p in historical["points"]}

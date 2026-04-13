@@ -28,13 +28,14 @@ interface EvolutionProps {
 }
 
 export function CurveEvolutionChart({ data }: EvolutionProps) {
+  const defaultLabels = new Set(["Current", "1M ago"]);
   const [enabled, setEnabled] = useState<Set<string>>(
-    () => new Set(data.curves.map((c) => c.label))
+    () => new Set(data.curves.filter((c) => defaultLabels.has(c.label)).map((c) => c.label))
   );
 
   // Reset enabled set when curves change (new commodity or data refresh)
   useEffect(() => {
-    setEnabled(new Set(data.curves.map((c) => c.label)));
+    setEnabled(new Set(data.curves.filter((c) => defaultLabels.has(c.label)).map((c) => c.label)));
   }, [data]);
 
   if (data.curves.length === 0) return null;

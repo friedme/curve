@@ -3,7 +3,6 @@ from datetime import date
 
 from app.config import COMMODITIES, DataQuality
 from app.services.barchart import fetch_futures_chain
-from app.services.historical import fetch_historical_curve
 from app.services.snapshots import find_closest_date, load_snapshot
 
 log = logging.getLogger(__name__)
@@ -43,10 +42,8 @@ async def build_forward_curve(
                     snap_date, commodity_slug, historical_date,
                 )
 
-        # Fall back to yfinance if no snapshot available
         if not points:
-            points = await fetch_historical_curve(config.barchart_root, historical_date)
-            source = "yfinance"
+            points = []
     else:
         chain = fetch_futures_chain(config.barchart_root)
         points = [

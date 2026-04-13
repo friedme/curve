@@ -18,7 +18,7 @@ interface Props {
 const PERIODS = ["3mo", "6mo", "1y", "2y", "5y"] as const;
 
 export default function SpotPrices({ prices }: Props) {
-  const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
+  const [selectedSlug, setSelectedSlug] = useState<string | null>(prices[0]?.slug ?? null);
   const [period, setPeriod] = useState("1y");
   const { data: history, isLoading } = useSpotHistory(selectedSlug, period);
 
