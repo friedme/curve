@@ -1,6 +1,6 @@
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-from datetime import date
+from datetime import date, timedelta
 from functools import lru_cache
 
 import yfinance as yf
@@ -11,12 +11,18 @@ from app.config import COMMODITIES, SPOT_WATCHES
 from app.models.schemas import (
     CommodityListItem,
     CurveComparisonResponse,
+    CurveEvolutionResponse,
+    CurvePoint,
+    DatedCurve,
     ForwardCurveResponse,
     SpotPriceItem,
+    SpreadHistoryResponse,
     SpreadPoint,
+    SpreadSeriesPoint,
 )
 from app.services.barchart import fetch_futures_chain
 from app.services.curve_builder import build_forward_curve
+from app.services.snapshots import get_available_dates, load_snapshot
 
 _executor = ThreadPoolExecutor(max_workers=4)
 _spot_history_cache: TTLCache = TTLCache(maxsize=20, ttl=3600)  # 1hr cache
@@ -73,6 +79,116 @@ async def compare_curves(
         current=ForwardCurveResponse(**current),
         historical=ForwardCurveResponse(**historical),
         spread=spread,
+    )
+
+
+LOOKBACKS = [
+    ("1W ago", 7),
+    ("1M ago", 30),
+    ("3M ago", 91),
+    ("6M ago", 182),
+    ("1Y ago", 365),
+]
+
+
+@router.get(
+    "/curve/{commodity_slug}/evolution",
+    response_model=CurveEvolutionResponse,
+)
+async def get_curve_evolution(commodity_slug: str):
+    """Current curve overlaid with historical curves from key lookback dates."""
+    if commodity_slug not in COMMODITIES:
+        raise HTTPException(404, f"Unknown commodity: {commodity_slug}")
+
+    config = COMMODITIES[commodity_slug]
+    today = date.today()
+
+    # Build current curve
+    current = await build_forward_curve(commodity_slug)
+    curves: list[DatedCurve] = [
+        DatedCurve(
+            as_of=current["as_of"],
+            label="Current",
+            points=[CurvePoint(**p) for p in current["points"]],
+        )
+    ]
+
+    # Build historical curves concurrently
+    async def _fetch_lookback(label: str, days: int):
+        target = today - timedelta(days=days)
+        hist = await build_forward_curve(commodity_slug, historical_date=target)
+        if hist["points"]:
+            return DatedCurve(
+                as_of=hist["as_of"],
+                label=label,
+                points=[CurvePoint(**p) for p in hist["points"]],
+            )
+        return None
+
+    results = await asyncio.gather(
+        *[_fetch_lookback(label, days) for label, days in LOOKBACKS]
+    )
+    for curve in results:
+        if curve is not None:
+            curves.append(curve)
+
+    return CurveEvolutionResponse(
+        commodity=config.display_name,
+        slug=config.slug,
+        unit=config.unit,
+        curves=curves,
+    )
+
+
+@router.get(
+    "/curve/{commodity_slug}/spread-history",
+    response_model=SpreadHistoryResponse,
+)
+async def get_spread_history(commodity_slug: str):
+    """Calendar spread (M1-M6, M1-M12) over time from snapshot data."""
+    if commodity_slug not in COMMODITIES:
+        raise HTTPException(404, f"Unknown commodity: {commodity_slug}")
+
+    config = COMMODITIES[commodity_slug]
+    available = get_available_dates(commodity_slug)
+
+    points: list[SpreadSeriesPoint] = []
+    for snap_date in available:
+        snap = load_snapshot(commodity_slug, snap_date)
+        if not snap:
+            continue
+
+        by_tenor = {p["tenor"]: p["price"] for p in snap}
+        m1 = by_tenor.get(0)
+        m6 = by_tenor.get(5)
+        m12 = by_tenor.get(11)
+
+        if m1 is not None:
+            points.append(SpreadSeriesPoint(
+                date=snap_date.isoformat(),
+                m1_m6=round(m6 - m1, 4) if m6 is not None else None,
+                m1_m12=round(m12 - m1, 4) if m12 is not None else None,
+            ))
+
+    # Also add today's live curve as the latest point
+    current = await build_forward_curve(commodity_slug)
+    if current["points"]:
+        by_tenor = {p["tenor"]: p["price"] for p in current["points"]}
+        m1 = by_tenor.get(0)
+        m6 = by_tenor.get(5)
+        m12 = by_tenor.get(11)
+        if m1 is not None:
+            points.append(SpreadSeriesPoint(
+                date=date.today().isoformat(),
+                m1_m6=round(m6 - m1, 4) if m6 is not None else None,
+                m1_m12=round(m12 - m1, 4) if m12 is not None else None,
+            ))
+
+    return SpreadHistoryResponse(
+        commodity=config.display_name,
+        slug=config.slug,
+        unit=config.unit,
+        points=points,
     )
 
 

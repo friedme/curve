@@ -46,6 +46,32 @@ export interface SpotPrice {
   contract: string;
 }
 
+export interface DatedCurve {
+  as_of: string;
+  label: string;
+  points: CurvePoint[];
+}
+
+export interface CurveEvolution {
+  commodity: string;
+  slug: string;
+  unit: string;
+  curves: DatedCurve[];
+}
+
+export interface SpreadSeriesPoint {
+  date: string;
+  m1_m6: number | null;
+  m1_m12: number | null;
+}
+
+export interface SpreadHistory {
+  commodity: string;
+  slug: string;
+  unit: string;
+  points: SpreadSeriesPoint[];
+}
+
 export interface SpotHistoryPoint {
   date: string;
   price: number;

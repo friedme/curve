@@ -92,10 +92,11 @@ def fetch_futures_chain(barchart_root: str) -> list[dict]:
             session = _get_session()
             r = session.get(api_url, params=params, timeout=15)
         r.raise_for_status()
+        data = r.json()
     except Exception:
+        # Connection error, HTTP error, or non-JSON response (e.g. captcha page)
+        _session_cache.clear()
         return []
-
-    data = r.json()
     contracts = []
 
     for row in data.get("data", []):
@@ -103,7 +104,7 @@ def fetch_futures_chain(barchart_root: str) -> list[dict]:
         symbol = raw.get("symbol", "")
         price = raw.get("lastPrice")
 
-        if not symbol or price is None:
+        if not symbol or price is None or price <= 0:
             continue
 
         # Skip the continuous contract (e.g., CLY00)

@@ -64,6 +64,10 @@ COMMODITIES: dict[str, CommodityConfig] = {
         slug="met-coal", display_name="Met Coal (Coking)",
         barchart_root="U7", unit="USD/t", data_quality=DataQuality.FULL,
     ),
+    "urea": CommodityConfig(
+        slug="urea", display_name="Urea (FOB US Gulf)",
+        barchart_root="JC", unit="USD/st", data_quality=DataQuality.FULL,
+    ),
 }
 
 # ── Spot price watches (front-month proxy, no curve) ───────────────

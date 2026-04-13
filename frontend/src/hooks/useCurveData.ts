@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { fetchCommodities, fetchCurve, fetchCurveComparison, fetchSpotPrices, fetchSpotHistory } from "../api/curveApi";
+import { fetchCommodities, fetchCurve, fetchCurveComparison, fetchCurveEvolution, fetchSpotPrices, fetchSpotHistory, fetchSpreadHistory } from "../api/curveApi";
 
 export function useCommodities() {
   return useQuery({
@@ -24,6 +24,24 @@ export function useCurveComparison(slug: string, historicalDate: string | null) 
     queryFn: () => fetchCurveComparison(slug, historicalDate!),
     staleTime: 5 * 60 * 1000,
     enabled: !!slug && !!historicalDate,
+  });
+}
+
+export function useCurveEvolution(slug: string) {
+  return useQuery({
+    queryKey: ["curve-evolution", slug],
+    queryFn: () => fetchCurveEvolution(slug),
+    staleTime: 5 * 60 * 1000,
+    enabled: !!slug,
+  });
+}
+
+export function useSpreadHistory(slug: string) {
+  return useQuery({
+    queryKey: ["spread-history", slug],
+    queryFn: () => fetchSpreadHistory(slug),
+    staleTime: 5 * 60 * 1000,
+    enabled: !!slug,
   });
 }
 

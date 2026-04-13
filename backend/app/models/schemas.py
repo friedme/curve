@@ -47,3 +47,29 @@ class SpotPriceItem(BaseModel):
     unit: str
     price: float
     contract: str  # e.g. "Apr 2026"
+
+
+class DatedCurve(BaseModel):
+    as_of: str
+    label: str  # e.g. "Current", "1M ago"
+    points: list[CurvePoint]
+
+
+class CurveEvolutionResponse(BaseModel):
+    commodity: str
+    slug: str
+    unit: str
+    curves: list[DatedCurve]
+
+
+class SpreadSeriesPoint(BaseModel):
+    date: str
+    m1_m6: Optional[float] = None
+    m1_m12: Optional[float] = None
+
+
+class SpreadHistoryResponse(BaseModel):
+    commodity: str
+    slug: str
+    unit: str
+    points: list[SpreadSeriesPoint]

@@ -1,27 +1,22 @@
 import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import CommoditySelector from "./components/CommoditySelector";
-import DatePicker from "./components/DatePicker";
-import ForwardCurveChart from "./components/ForwardCurveChart";
-import SpreadChart from "./components/SpreadChart";
 import CurveMetrics from "./components/CurveMetrics";
 import DataQualityBanner from "./components/DataQualityBanner";
 import SpotPrices from "./components/SpotPrices";
-import { useCurrentCurve, useCurveComparison, useSpotPrices } from "./hooks/useCurveData";
+import { CurveEvolutionChart, SpreadTimeSeriesChart } from "./components/TermStructure";
+import { useCurrentCurve, useCurveEvolution, useSpreadHistory, useSpotPrices } from "./hooks/useCurveData";
 
 const queryClient = new QueryClient();
 
 function Dashboard() {
   const [selectedCommodity, setSelectedCommodity] = useState("brent");
-  const [historicalDate, setHistoricalDate] = useState<string | null>(null);
 
-  const { data: currentCurve, isLoading: loadingCurrent, error: errorCurrent } =
+  const { data: currentCurve, isLoading, error: errorCurrent } =
     useCurrentCurve(selectedCommodity);
-  const { data: comparison, isLoading: loadingComparison } =
-    useCurveComparison(selectedCommodity, historicalDate);
   const { data: spotPrices } = useSpotPrices();
-
-  const isLoading = loadingCurrent || (historicalDate && loadingComparison);
+  const { data: evolution } = useCurveEvolution(selectedCommodity);
+  const { data: spreadHistory } = useSpreadHistory(selectedCommodity);
 
   return (
     <div className="min-h-screen bg-[#0a0e17]">
@@ -37,12 +32,11 @@ function Dashboard() {
         </div>
 
         {/* Controls */}
-        <div className="space-y-3 mb-6">
+        <div className="mb-6">
           <CommoditySelector
             selected={selectedCommodity}
             onChange={setSelectedCommodity}
           />
-          <DatePicker value={historicalDate} onChange={setHistoricalDate} />
         </div>
 
         {/* Loading */}
@@ -65,21 +59,20 @@ function Dashboard() {
           <div className="space-y-4">
             <DataQualityBanner curve={currentCurve} />
 
-            <CurveMetrics
-              current={currentCurve}
-              historical={comparison?.historical}
-            />
+            <CurveMetrics current={currentCurve} />
 
-            <ForwardCurveChart
-              current={currentCurve}
-              historical={comparison?.historical}
-            />
-
-            {comparison && (
-              <SpreadChart
-                spread={comparison.spread}
-                unit={currentCurve.unit}
-              />
+            {evolution ? (
+              <CurveEvolutionChart data={evolution} />
+            ) : (
+              <div className="bg-slate-800/30 rounded-xl p-4 h-[460px] flex items-center justify-center">
+                <div className="flex items-center gap-2 text-slate-500 text-sm">
+                  <div className="w-4 h-4 border-2 border-slate-600 border-t-slate-300 rounded-full animate-spin" />
+                  Loading curves...
+                </div>
+              </div>
+            )}
+            {spreadHistory && spreadHistory.points.length > 0 && (
+              <SpreadTimeSeriesChart data={spreadHistory} />
             )}
 
             {spotPrices && <SpotPrices prices={spotPrices} />}

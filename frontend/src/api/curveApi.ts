@@ -1,4 +1,4 @@
-import type { CommodityListItem, CurveComparison, ForwardCurve, SpotHistory, SpotPrice } from "../types";
+import type { CommodityListItem, CurveComparison, CurveEvolution, ForwardCurve, SpotHistory, SpotPrice, SpreadHistory } from "../types";
 
 const BASE = "/api";
 
@@ -22,6 +22,18 @@ export async function fetchCurveComparison(
     `${BASE}/curve/${slug}/compare?historical_date=${historicalDate}`
   );
   if (!res.ok) throw new Error(`Failed to fetch comparison for ${slug}`);
+  return res.json();
+}
+
+export async function fetchCurveEvolution(slug: string): Promise<CurveEvolution> {
+  const res = await fetch(`${BASE}/curve/${slug}/evolution`);
+  if (!res.ok) throw new Error(`Failed to fetch curve evolution for ${slug}`);
+  return res.json();
+}
+
+export async function fetchSpreadHistory(slug: string): Promise<SpreadHistory> {
+  const res = await fetch(`${BASE}/curve/${slug}/spread-history`);
+  if (!res.ok) throw new Error(`Failed to fetch spread history for ${slug}`);
   return res.json();
 }
 
