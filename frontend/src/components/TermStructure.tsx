@@ -28,7 +28,7 @@ interface EvolutionProps {
 }
 
 export function CurveEvolutionChart({ data }: EvolutionProps) {
-  const defaultLabels = new Set(["Current", "1M ago"]);
+  const defaultLabels = new Set(["Current", "1W ago"]);
   const [enabled, setEnabled] = useState<Set<string>>(
     () => new Set(data.curves.filter((c) => defaultLabels.has(c.label)).map((c) => c.label))
   );
