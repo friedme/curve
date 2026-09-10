@@ -7,11 +7,16 @@ COPY frontend/ ./
 RUN npm run build
 
 # -- Stage 2: Production image --
-FROM python:3.12-slim
+FROM python:3.12-slim-bookworm
 WORKDIR /app
 
 COPY backend/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Headless Chromium for getting past Barchart's WAF challenge (see services/barchart.py)
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+RUN python -m playwright install --with-deps --only-shell chromium \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY backend/ ./
 COPY --from=frontend-build /app/frontend/dist /app/static

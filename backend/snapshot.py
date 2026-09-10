@@ -24,6 +24,7 @@ Usage:
 
 import argparse
 import csv
+import logging
 import os
 import sys
 from datetime import date
@@ -40,8 +41,11 @@ DEFAULT_DIR = Path(os.environ.get("CURVE_DATA_DIR", Path(__file__).parent.parent
 CSV_COLUMNS = ["snapshot_date", "symbol", "contract_date", "label", "tenor", "price"]
 
 
-def snapshot_commodity(slug: str, output_dir: Path, snapshot_date: date) -> int:
-    """Fetch and append today's curve for one commodity. Returns row count."""
+def snapshot_commodity(slug: str, output_dir: Path, snapshot_date: date) -> int | None:
+    """Fetch and append today's curve for one commodity.
+
+    Returns row count written (0 if already snapshotted), or None if the fetch failed.
+    """
     config = COMMODITIES.get(slug)
     if not config or config.data_quality == DataQuality.UNAVAILABLE:
         return 0
@@ -49,7 +53,7 @@ def snapshot_commodity(slug: str, output_dir: Path, snapshot_date: date) -> int:
     chain = fetch_futures_chain(config.barchart_root)
     if not chain:
         print(f"  {slug}: no data returned")
-        return 0
+        return None
 
     csv_path = output_dir / f"{slug}.csv"
     file_exists = csv_path.exists()
@@ -88,6 +92,7 @@ def main():
                         help="Snapshot date (default: today)")
     parser.add_argument("--list", action="store_true", help="List available commodities")
     args = parser.parse_args()
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
     if args.list:
         for slug, config in COMMODITIES.items():
@@ -104,13 +109,19 @@ def main():
 
     print(f"Snapshotting {len(slugs)} commodities for {args.date} -> {args.dir}")
     total = 0
+    failed = []
     for slug in slugs:
         n = snapshot_commodity(slug, args.dir, args.date)
-        if n:
+        if n is None:
+            failed.append(slug)
+        elif n:
             print(f"  {slug}: {n} contracts")
             total += n
 
     print(f"Done. {total} total rows written.")
+    if failed:
+        print(f"FAILED: no data for {', '.join(failed)}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

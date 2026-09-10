@@ -1,15 +1,21 @@
 services:
   web:
     build: .
+    image: curve-app:latest
     ports:
       - "8001:8001"
     volumes:
       - curve-data:/app/data/snapshots
     restart: unless-stopped
+    # Chromium needs more than Docker's 64MB default /dev/shm
+    shm_size: "512m"
 
   snapshot:
-    build: .
+    # Same image as web, so `docker compose up --build` (deploy.sh) also updates
+    # the nightly snapshot job. It used to build its own image, which never got rebuilt.
+    image: curve-app:latest
     command: python snapshot.py
+    shm_size: "512m"
     volumes:
       - curve-data:/app/data/snapshots
     # Run daily — use cron on the host or a scheduler container.

@@ -28,6 +28,7 @@ async def build_forward_curve(
         }
 
     source = "live"
+    as_of = historical_date or date.today()
 
     if historical_date:
         # Try local CSV snapshots first (exact or closest earlier date)
@@ -37,6 +38,8 @@ async def build_forward_curve(
             points = load_snapshot(commodity_slug, snap_date)
             if points:
                 source = "snapshot"
+                # Report the date the data is actually from, not the date asked for
+                as_of = snap_date
                 log.info(
                     "Using snapshot %s for %s (requested %s)",
                     snap_date, commodity_slug, historical_date,
@@ -60,7 +63,7 @@ async def build_forward_curve(
         "slug": config.slug,
         "data_quality": config.data_quality.value,
         "unit": config.unit,
-        "as_of": (historical_date or date.today()).isoformat(),
+        "as_of": as_of.isoformat(),
         "points": points,
         "total_contracts": len(points),
         "source": source,
