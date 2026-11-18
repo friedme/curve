@@ -15,6 +15,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Headless Chromium for getting past Barchart's WAF challenge (see services/barchart.py)
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+# Playwright's bundled Node driver links against libatomic, which this slim
+# arm64 base does not carry. It has to be present before `playwright install`
+# runs, since --with-deps resolves the browser packages by running that driver.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libatomic1 \
+    && rm -rf /var/lib/apt/lists/*
 RUN python -m playwright install --with-deps --only-shell chromium \
     && rm -rf /var/lib/apt/lists/*
 
