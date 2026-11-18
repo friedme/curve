@@ -89,9 +89,7 @@ class _BrowserClient:
         while True:
             time.sleep(IDLE_SWEEP_S)
             try:
-                if self._page is not None and time.time() - self._page_opened_at >= PAGE_MAX_AGE_S:
-                    log.info("Closing idle Barchart browser session")
-                    self._executor.submit(self._shutdown).result(timeout=60)
+                self._executor.submit(self._shutdown_if_idle).result(timeout=60)
             except Exception as e:
                 log.warning("Idle Barchart session sweep failed: %s: %s", type(e).__name__, e)
 
@@ -105,6 +103,11 @@ class _BrowserClient:
             pass
 
     # --- everything below runs on the browser thread ---
+
+    def _shutdown_if_idle(self):
+        if self._page is not None and time.time() - self._page_opened_at >= PAGE_MAX_AGE_S:
+            log.info("Closing idle Barchart browser session")
+            self._shutdown()
 
     def _get_json(self, params: dict) -> dict:
         for attempt in (1, 2):

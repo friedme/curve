@@ -65,6 +65,41 @@ class PageUsabilityTests(unittest.TestCase):
         self.assertFalse(self.client._page_is_usable())
 
 
+class IdleReaperTests(unittest.TestCase):
+    """The reaper must close an idle session but never a live one.
+
+    Teardown previously happened only on the next request, so one API call
+    left Chromium running indefinitely at a third of a core.
+    """
+
+    def setUp(self):
+        self.client = _BrowserClient()
+
+    def tearDown(self):
+        self.client._executor.shutdown(wait=False)
+
+    def test_a_live_session_is_left_alone(self):
+        self.client._page = object()
+        self.client._page_opened_at = time.time()
+        self.client._browser = FakeBrowser()
+        self.client._shutdown_if_idle()
+        self.assertIsNotNone(self.client._page)
+
+    def test_an_idle_session_is_closed(self):
+        self.client._page = object()
+        self.client._page_opened_at = time.time() - PAGE_MAX_AGE_S - 1
+        browser = FakeBrowser()
+        self.client._browser = browser
+        self.client._shutdown_if_idle()
+        self.assertIsNone(self.client._page)
+        self.assertIsNone(self.client._browser)
+        self.assertTrue(browser.closed)
+
+    def test_nothing_to_close_is_not_an_error(self):
+        self.client._shutdown_if_idle()
+        self.assertIsNone(self.client._page)
+
+
 class FailureTeardownTests(unittest.TestCase):
     def tearDown(self):
         self.client._executor.shutdown(wait=False)
