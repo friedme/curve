@@ -35,7 +35,8 @@ PAGE_URL = "https://www.barchart.com/futures/quotes/CL*0/futures-prices"
 API_PATH = "/proxies/core-api/v1/quotes/get"
 FIELDS = "symbol,symbolName,lastPrice,volume,openInterest,tradeTime"
 
-# Recycle the browser page periodically so WAF/session tokens never go stale.
+# Recycle the session periodically so WAF/session tokens never go stale.
+# The whole browser goes with the page, so nothing outlives a recycle.
 PAGE_MAX_AGE_S = 20 * 60
 CHALLENGE_TIMEOUT_S = 60
 
@@ -91,20 +92,37 @@ class _BrowserClient:
                     return json.loads(res["body"])
                 raise BarchartBlocked(f"API HTTP {res['status']}: {res['body'][:200]}")
             except Exception as e:
-                log.warning("Barchart fetch attempt %d for %s failed: %s", attempt, params.get("root"), e)
-                self._close_page()
+                log.warning("Barchart fetch attempt %d for %s failed: %s: %s",
+                            attempt, params.get("root"), type(e).__name__, e)
+                # Replace the whole browser rather than just the context. A
+                # crashed Chromium leaves self._browser non-None, so reopening
+                # only the context reused the dead object on every later call —
+                # one crash in September became a five-week outage, with the
+                # driver connection spinning a core and leaking zombie children.
+                self._shutdown()
                 if attempt == 2:
                     raise
 
-    def _ensure_page(self):
-        if self._page and time.time() - self._page_opened_at < PAGE_MAX_AGE_S:
-            return
-        self._close_page()
+    def _page_is_usable(self) -> bool:
+        if self._page is None or time.time() - self._page_opened_at >= PAGE_MAX_AGE_S:
+            return False
+        try:
+            return self._browser is not None and self._browser.is_connected()
+        except Exception:
+            return False
 
-        if self._browser is None:
-            from playwright.sync_api import sync_playwright
-            self._pw = sync_playwright().start()
-            self._browser = self._pw.chromium.launch(headless=True)
+    def _ensure_page(self):
+        if self._page_is_usable():
+            return
+        # Chromium's lifetime is tied to the page's: a long-lived browser
+        # accumulates renderer children, and an unreachable one can only be
+        # fixed by replacing it. Going fully idle between recycles also costs
+        # nothing, since a cold session is ready in a few seconds.
+        self._shutdown()
+
+        from playwright.sync_api import sync_playwright
+        self._pw = sync_playwright().start()
+        self._browser = self._pw.chromium.launch(headless=True)
 
         self._context = self._browser.new_context(
             user_agent=(
@@ -205,7 +223,7 @@ def fetch_futures_chain(barchart_root: str) -> list[dict]:
     try:
         data = _client.get_json(params)
     except Exception as e:
-        log.error("Barchart fetch for %s failed: %s", barchart_root, e)
+        log.error("Barchart fetch for %s failed: %s: %s", barchart_root, type(e).__name__, e)
         return []
 
     contracts = []
