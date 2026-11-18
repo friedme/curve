@@ -1,6 +1,11 @@
 services:
   web:
-    build: .
+    build:
+      context: .
+      # The Pi's resolver is loopback-only (Pi-hole), so a build container
+      # cannot resolve PyPI on its own network. This affects dependency
+      # installation during the build, not the running container.
+      network: host
     image: curve-app:latest
     ports:
       - "8001:8001"
