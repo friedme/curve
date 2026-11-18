@@ -12,6 +12,9 @@ services:
     volumes:
       - curve-data:/app/data/snapshots
     restart: unless-stopped
+    # uvicorn would otherwise be PID 1 and never reap Chromium's orphaned
+    # children, which is how six zombie headless_shell processes accumulated.
+    init: true
     # Chromium needs more than Docker's 64MB default /dev/shm
     shm_size: "512m"
 

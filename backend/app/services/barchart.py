@@ -39,6 +39,8 @@ FIELDS = "symbol,symbolName,lastPrice,volume,openInterest,tradeTime"
 # The whole browser goes with the page, so nothing outlives a recycle.
 PAGE_MAX_AGE_S = 20 * 60
 CHALLENGE_TIMEOUT_S = 60
+# How often the reaper checks for a session that has outlived PAGE_MAX_AGE_S.
+IDLE_SWEEP_S = 60
 
 _FETCH_JS = """
 async ([path, params]) => {
@@ -71,6 +73,27 @@ class _BrowserClient:
         self._context = None
         self._page = None
         self._page_opened_at = 0.0
+        self._reaper = threading.Thread(target=self._reap_idle_session, daemon=True,
+                                        name="barchart-reaper")
+        self._reaper.start()
+
+    def _reap_idle_session(self):
+        """Close an idle Chromium instead of waiting for the next request.
+
+        Teardown used to happen only inside _ensure_page, so a single API call
+        left the browser running until somebody called again — idling at a
+        third of a core on a Raspberry Pi that is otherwise doing nothing.
+        Shutdown is submitted to the browser thread like any other call, so it
+        serialises behind an in-flight fetch rather than racing it.
+        """
+        while True:
+            time.sleep(IDLE_SWEEP_S)
+            try:
+                if self._page is not None and time.time() - self._page_opened_at >= PAGE_MAX_AGE_S:
+                    log.info("Closing idle Barchart browser session")
+                    self._executor.submit(self._shutdown).result(timeout=60)
+            except Exception as e:
+                log.warning("Idle Barchart session sweep failed: %s: %s", type(e).__name__, e)
 
     def get_json(self, params: dict) -> dict:
         return self._executor.submit(self._get_json, params).result(timeout=180)
